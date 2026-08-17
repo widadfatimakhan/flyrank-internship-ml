@@ -1,0 +1,43 @@
+{
+  "assignment": "ML-06 - Signal Audit",
+  "slice": {
+    "month": "2026-03",
+    "eligible_pages": 61881,
+    "clients": 36
+  },
+  "floors": {
+    "bucket": 50,
+    "cross_cut": 30
+  },
+  "distributions": {
+    "impressions_mean_over_median": 2.29,
+    "pearson_raw": 0.69,
+    "pearson_log": 0.713,
+    "spearman": 0.681,
+    "pearson_raw_top1pct_removed": 0.602
+  },
+  "verdicts": {
+    "signal_1_normal_ctr_same_across_clients": "FALSE",
+    "signal_2_spiky_traffic_distorts_ctr": "MIXED",
+    "signal_3_falling_impressions_worse_ctr": "CONFIRMED",
+    "flag_linked_top_band_dip_is_real": "CONFIRMED",
+    "flag_linked_implication": "position-peer fairness FAILS at positions 1-2"
+  },
+  "client_spread": {
+    "lowest_pooled_ctr_pp": 0.115,
+    "highest_pooled_ctr_pp": 1.159,
+    "spread_x": 10.1,
+    "clients_over_floor": 23
+  },
+  "top_band_decomposition": {
+    "band_1_2_pages": 483,
+    "band_1_2_pooled_ctr_pp": 0.118,
+    "band_3_5_pooled_ctr_pp": 0.394,
+    "ctr_without_largest_client": 0.09,
+    "ctr_without_top10pct_pages": 0.149,
+    "clients_in_both_bands_over_floor": 5,
+    "cross_cut_floor_used": 30,
+    "clients_worse_at_1_2": 5
+  },
+  "claim_discipline": "all verdicts OBSERVED in one month, 36 clients. Decision-support only."
+}

@@ -1,0 +1,71 @@
+{
+  "assignment": "ML-07 - Baseline Action Score",
+  "lane": "Lane 4 - CTR / engagement opportunity scoring (CONFIRMED, not switched)",
+  "slice": {
+    "month": "2026-03",
+    "window": [
+      "2026-03-01",
+      "2026-03-31"
+    ],
+    "decision_moment": "2026-04-01",
+    "pages_with_gsc": 176738,
+    "eligible_pages": 61881,
+    "clients": 36
+  },
+  "eligibility": {
+    "min_impressions": 500,
+    "min_active_days": 5,
+    "min_position": 1.0,
+    "cooldown": "NOT IMPLEMENTABLE - release has no optimisation history"
+  },
+  "signal_checks": {
+    "signal_1_ctr_falls_with_position": {
+      "verdict": "MIXED",
+      "flag_linked": true,
+      "buckets": 7,
+      "floor_n": 50
+    },
+    "signal_2_volume_makes_ctr_trustworthy": {
+      "verdict": "CONFIRMED",
+      "flag_linked": false,
+      "buckets": 5
+    }
+  },
+  "rule": {
+    "threshold_gap_pp": 0.1,
+    "threshold_missed_clicks": 10,
+    "reason_codes": [
+      "CTR_BELOW_POSITION_PEERS",
+      "WITHIN_PEER_RANGE"
+    ],
+    "actions": [
+      "SNIPPET_REVIEW",
+      "MONITOR"
+    ],
+    "score": "expected_missed_clicks = impressions * ctr_gap_pp / 100"
+  },
+  "queue": {
+    "flagged": 6019,
+    "monitor": 55862,
+    "clicks_at_stake_flagged": 161145,
+    "clicks_at_stake_top20": 6478
+  },
+  "top20_review": {
+    "weak_picks": 4,
+    "confidence_mix": {
+      "HIGH": 20
+    },
+    "caveat_mix": {
+      "intent may be non-click": 9,
+      "demand falling": 4,
+      "top-band anomaly": 3,
+      "small gap, big page": 3,
+      "one-day spike": 1
+    }
+  },
+  "open_questions": [
+    "position 1-2 band pools to 0.118% CTR with 35% zero-click pages -- the lowest of any shallow band, and the arithmetic source of ML-04's top_3-below-page_1 result",
+    "CTR level ~0.3% across the lane vs ~2.78% documented (carried from ML-04, still open)"
+  ],
+  "proxy_note": "ctr_gap_pp is an AUTHORED proxy, not an observed outcome. No causal claim."
+}

@@ -1,0 +1,80 @@
+{
+  "assignment": "ML-04 - Search Intelligence Data Contract",
+  "contract": {
+    "lane": "Lane 4 - CTR / engagement opportunity scoring",
+    "unit_of_analysis": "one page-month: (client_hash_id, content_hash_id) over month=2026-03",
+    "source_grain": "report_date x client_hash_id x content_hash_id (page-day)",
+    "tables_used": [
+      "fact_content_daily_performance (month=2026-03)",
+      "dim_clients (context only)"
+    ],
+    "observation_window": "2026-03-01 .. 2026-03-31",
+    "decision_moment": "2026-04-01",
+    "target": "ctr_gap_pp -- AUTHORED PROXY, leave-one-out volume-weighted tier baseline",
+    "queue_ordering": "expected_missed_clicks = impressions * ctr_gap_pp / 100",
+    "deliberate_exclusion": "all 14 GA4-side columns (three-valued availability flag)",
+    "sealed": [
+      "2026-06"
+    ]
+  },
+  "verified": {
+    "Q1_grain_violations": 0,
+    "Q2_page_day_rows": 9841378,
+    "Q2_distinct_pages": 331437,
+    "Q2_distinct_clients": 55,
+    "Q2_date_span": [
+      "2026-03-01",
+      "2026-03-31"
+    ],
+    "Q3_gsc_true_rows": 3611061,
+    "Q3_ga4_true_rows": 413966,
+    "Q3_ga4_nulls_missed_by_equals_false": 3018741,
+    "Q3_ga4_client_on_row_off": 6408671,
+    "position_sub_1_rows": 264737,
+    "position_numerator_used": "SUM(gsc_sum_position)",
+    "position_convention": "gsc_avg_position is ZERO-BASED (= sum/impressions); +1 applied",
+    "pages_removed_by_position_floor": 0,
+    "pages_rescued_by_the_plus_one": 452
+  },
+  "lane_slice": {
+    "rows": 61881,
+    "clients": 36,
+    "eligibility": {
+      "min_impressions": 500,
+      "min_active_days": 5,
+      "min_position": 1.0
+    }
+  },
+  "features": [
+    "log_impressions_31d",
+    "days_with_impressions_31d",
+    "position_volatility_31d",
+    "top_day_impression_share",
+    "momentum_log14v14"
+  ],
+  "proxy": "ctr_gap_pp (leave-one-out, volume-weighted tier baseline) - AUTHORED, not ground truth",
+  "leak_experiment": {
+    "leaked_column": "clicks_31d",
+    "leaked_spearman": 0.902,
+    "honest_spearman": 0.168,
+    "status": "removed"
+  },
+  "honest_baseline": {
+    "features": [
+      "log_impressions_31d",
+      "days_with_impressions_31d",
+      "position_volatility_31d",
+      "top_day_impression_share",
+      "momentum_log14v14"
+    ],
+    "spearman": 0.168,
+    "r2": -0.161,
+    "validation": "GroupShuffleSplit on client_hash_id",
+    "seed": 42
+  },
+  "open_questions": [
+    "CTR level is ~0.3% across ALL tiers vs ~2.78% documented, and top_3 sits below page_1 -- systemic, not an off-by-one",
+    "ga4_data_available FALSE conflates pre-start rows with zero-traffic rows",
+    "partial-history clients inside a fixed calendar window"
+  ]
+}
