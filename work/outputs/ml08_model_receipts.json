@@ -1,0 +1,96 @@
+{
+  "assignment": "ML-08 - Capstone Modeling Lane",
+  "design": {
+    "features_month": "2026-03",
+    "outcome_month": "2026-04",
+    "decision_moment": "2026-04-01",
+    "label": "would the ML-07 rule flag this page again in April (gap >= 0.1pp and missed clicks >= 10)",
+    "label_type": "OBSERVED outcome (first in this project), not an authored proxy",
+    "validation": "GroupKFold(5) on client_hash_id, all metrics out-of-fold",
+    "seed": 42
+  },
+  "population": {
+    "march_eligible": 61881,
+    "with_april_outcome": 60942,
+    "dropped_no_april_outcome": 939,
+    "clients": 34,
+    "base_rate": 0.0949
+  },
+  "comparison": [
+    {
+      "model": "0. random ranking (base rate)",
+      "precision@50": 0.1,
+      "precision@200": 0.095,
+      "ROC AUC": 0.497,
+      "lift@50": 1.05
+    },
+    {
+      "model": "1. ML-07 rule (March missed clicks)",
+      "precision@50": 0.9,
+      "precision@200": 0.875,
+      "ROC AUC": 0.864,
+      "lift@50": 9.48
+    },
+    {
+      "model": "2. LogReg  - shape features only",
+      "precision@50": 0.48,
+      "precision@200": 0.385,
+      "ROC AUC": 0.878,
+      "lift@50": 5.06
+    },
+    {
+      "model": "3. RF      - shape features only",
+      "precision@50": 0.92,
+      "precision@200": 0.88,
+      "ROC AUC": 0.881,
+      "lift@50": 9.69
+    },
+    {
+      "model": "4. RF      - shape + March gap",
+      "precision@50": 1.0,
+      "precision@200": 0.975,
+      "ROC AUC": 0.922,
+      "lift@50": 10.53
+    }
+  ],
+  "bootstrap_diff_at_200": {
+    "mean": 0.0968,
+    "ci95": [
+      0.05,
+      0.145
+    ],
+    "resamples": 500
+  },
+  "split_gap": {
+    "auc_random_split": 0.911,
+    "auc_grouped_split": 0.893
+  },
+  "top_features": [
+    {
+      "feature": "log_impressions_31d",
+      "drop_in_auc": 0.1369,
+      "sd": 0.0025
+    },
+    {
+      "feature": "mar_gap_pp",
+      "drop_in_auc": 0.037,
+      "sd": 0.0004
+    },
+    {
+      "feature": "mar_ctr_pp",
+      "drop_in_auc": 0.0123,
+      "sd": 0.0006
+    },
+    {
+      "feature": "log_clicks_31d",
+      "drop_in_auc": 0.0116,
+      "sd": 0.0008
+    },
+    {
+      "feature": "position_volatility_31d",
+      "drop_in_auc": 0.0089,
+      "sd": 0.0004
+    }
+  ],
+  "claim_discipline": "observed persistence, measured out-of-fold, decision-support only; no causal claim about editing pages"
+}
