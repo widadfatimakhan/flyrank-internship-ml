@@ -18,78 +18,78 @@
   },
   "comparison": [
     {
-      "model": "0. random ranking (base rate)",
-      "precision@50": 0.1,
-      "precision@200": 0.095,
-      "ROC AUC": 0.497,
-      "lift@50": 1.05
+      "model": "random ranking (base rate)",
+      "precision@50": 0.12,
+      "precision@200": 0.085,
+      "ROC AUC": 0.494,
+      "lift@50": 1.26
     },
     {
-      "model": "1. ML-07 rule (March missed clicks)",
+      "model": "ML-07 rule (March missed clicks)",
       "precision@50": 0.9,
       "precision@200": 0.875,
       "ROC AUC": 0.864,
       "lift@50": 9.48
     },
     {
-      "model": "2. LogReg  - shape features only",
+      "model": "LogReg  - shape features only",
       "precision@50": 0.48,
       "precision@200": 0.385,
       "ROC AUC": 0.878,
       "lift@50": 5.06
     },
     {
-      "model": "3. RF      - shape features only",
-      "precision@50": 0.92,
-      "precision@200": 0.88,
+      "model": "RF      - shape features only",
+      "precision@50": 0.9,
+      "precision@200": 0.845,
       "ROC AUC": 0.881,
-      "lift@50": 9.69
+      "lift@50": 9.48
     },
     {
-      "model": "4. RF      - shape + March gap",
+      "model": "RF      - shape + March gap",
       "precision@50": 1.0,
-      "precision@200": 0.975,
+      "precision@200": 0.98,
       "ROC AUC": 0.922,
       "lift@50": 10.53
     }
   ],
   "bootstrap_diff_at_200": {
-    "mean": 0.0968,
+    "mean": 0.1027,
     "ci95": [
-      0.05,
-      0.145
+      0.055,
+      0.15
     ],
     "resamples": 500
   },
   "split_gap": {
-    "auc_random_split": 0.911,
+    "auc_random_split": 0.909,
     "auc_grouped_split": 0.893
   },
   "top_features": [
     {
       "feature": "log_impressions_31d",
-      "drop_in_auc": 0.1369,
-      "sd": 0.0025
+      "drop_in_auc": 0.1244,
+      "sd": 0.0012
     },
     {
       "feature": "mar_gap_pp",
-      "drop_in_auc": 0.037,
-      "sd": 0.0004
-    },
-    {
-      "feature": "mar_ctr_pp",
-      "drop_in_auc": 0.0123,
-      "sd": 0.0006
-    },
-    {
-      "feature": "log_clicks_31d",
-      "drop_in_auc": 0.0116,
+      "drop_in_auc": 0.039,
       "sd": 0.0008
     },
     {
+      "feature": "log_clicks_31d",
+      "drop_in_auc": 0.0142,
+      "sd": 0.0008
+    },
+    {
+      "feature": "mar_ctr_pp",
+      "drop_in_auc": 0.0135,
+      "sd": 0.0005
+    },
+    {
       "feature": "position_volatility_31d",
-      "drop_in_auc": 0.0089,
-      "sd": 0.0004
+      "drop_in_auc": 0.0096,
+      "sd": 0.0005
     }
   ],
   "claim_discipline": "observed persistence, measured out-of-fold, decision-support only; no causal claim about editing pages"
