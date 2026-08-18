@@ -1,0 +1,39 @@
+{
+  "assignment": "ML-05 - Feature Vector and Leakage/Privacy Check",
+  "slice": {
+    "month": "2026-03",
+    "window": [
+      "2026-03-01",
+      "2026-03-31"
+    ],
+    "decision_moment": "2026-04-01",
+    "rows": 61881,
+    "clients": 36
+  },
+  "features": {
+    "n": 10,
+    "names": [
+      "log_impressions_31d",
+      "days_with_impressions_31d",
+      "position_volatility_31d",
+      "top_day_impression_share",
+      "momentum_log14v14",
+      "impressions_share_of_client",
+      "log_word_count",
+      "content_meta_missing",
+      "cat_feedly article",
+      "cat_keyword article"
+    ],
+    "categorical_source": "content_type",
+    "dim_content_joined": true
+  },
+  "leakage_hunt": {
+    "control_clicks_31d_spearman": -0.691,
+    "strongest_honest_feature_spearman": 0.181,
+    "strongest_honest_feature": "impressions_share_of_client",
+    "peer_pp_from_position_spearman": 0.859,
+    "privacy_checks_passed": true
+  },
+  "target": "ctr_gap_pp - AUTHORED proxy, leave-one-out volume-weighted tier baseline",
+  "claim_discipline": "features are observed; the target is authored; the output is decision-support"
+}
