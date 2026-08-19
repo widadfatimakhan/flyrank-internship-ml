@@ -1,0 +1,98 @@
+{
+  "assignment": "ML-09 - Validation and Research Claim Audit",
+  "reproduction": {
+    "week5_receipt": {
+      "march_eligible": 61881,
+      "rows": 60942,
+      "clients": 34,
+      "base_rate": 0.095
+    },
+    "this_run": {
+      "march_eligible": 61881,
+      "rows": 60942,
+      "clients": 34,
+      "base_rate": 0.095
+    },
+    "matched": true
+  },
+  "paper_findings_audited": [
+    {
+      "finding": "#1 anatomy of growing content",
+      "label_question": "trend direction is a stored field: window, threshold and treatment of flat pages unstated",
+      "design_question": "two-group averages with no control; growth, youth and lifecycle stage move together",
+      "suggested_strengthening": "report the word gap within age bands, and medians alongside means"
+    },
+    {
+      "finding": "#8 old refreshed content vs new content",
+      "label_question": "outcome is Health Score, a hand-built recipe that is 60% impressions and position",
+      "design_question": "the active-content filter removes old pages that lost all traffic, so the comparison is against surviving stale pages",
+      "suggested_strengthening": "state the filter beside the finding, report how many pages it removes, follow a fixed cohort forward"
+    }
+  ],
+  "honest_split": {
+    "before": "GroupKFold(5) on client, same month",
+    "after": "trained Feb->Mar, deployed unchanged on Mar->Apr",
+    "table": [
+      {
+        "design": "0. random ranking (floor)",
+        "precision@50": 0.04,
+        "precision@200": 0.06,
+        "ROC AUC": 0.5,
+        "lift@50": 0.42
+      },
+      {
+        "design": "1. ML-07 rule, no learning",
+        "precision@50": 0.9,
+        "precision@200": 0.875,
+        "ROC AUC": 0.864,
+        "lift@50": 9.48
+      },
+      {
+        "design": "2. BEFORE - grouped CV, same month",
+        "precision@50": 0.96,
+        "precision@200": 0.975,
+        "ROC AUC": 0.921,
+        "lift@50": 10.11
+      },
+      {
+        "design": "3. AFTER  - trained Feb->Mar, deployed unchanged",
+        "precision@50": 0.96,
+        "precision@200": 0.98,
+        "ROC AUC": 0.925,
+        "lift@50": 10.11
+      }
+    ],
+    "base_rate_train": 0.119,
+    "base_rate_deploy": 0.0949,
+    "deploy_clients_seen_in_training": 30,
+    "deploy_clients_new": 4
+  },
+  "bootstrap_time_forward_vs_rule_at_200": {
+    "mean": 0.1026,
+    "ci95": [
+      0.055,
+      0.155
+    ],
+    "resamples": 300
+  },
+  "leakage_audit": {
+    "timeline_ok": true,
+    "no_outcome_columns": true,
+    "no_product_flags": true,
+    "population_dropped_no_outcome": 939,
+    "sabotage_test_auc_gain": 0.0539,
+    "detector_fires": true
+  },
+  "claim_language": [
+    "observed",
+    "measured",
+    "directional",
+    "decision-support"
+  ],
+  "open_checks": [
+    "only one deployment window - a full backtest needs many decision moments",
+    "no calibration check",
+    "no causal evidence: nothing was intervened on",
+    "June 2026 remains sealed"
+  ]
+}
