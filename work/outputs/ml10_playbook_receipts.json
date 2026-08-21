@@ -1,0 +1,92 @@
+{
+  "assignment": "ML-10 - Content Action Playbook",
+  "decision_moment": "2026-04-01",
+  "design": "frozen ML-07 rule supplies the reason; ML-08/09 model supplies the order",
+  "model": {
+    "trained_on": "2026-02 features -> 2026-03 outcomes",
+    "applied_to": "2026-03 features -> 2026-04 outcomes",
+    "refit": false,
+    "seed": 42
+  },
+  "population": {
+    "eligible_pages": 60942,
+    "clients": 34,
+    "base_rate": 0.0949
+  },
+  "queue": {
+    "review_budget": 50,
+    "action_mix": {
+      "NO_ACTION": 43608,
+      "MONITOR_ONLY": 14025,
+      "VERIFY_THEN_REVIEW": 1795,
+      "SNIPPET_REVIEW": 1452,
+      "INVESTIGATE_QUIET_RISK": 62
+    },
+    "actionable_rows": 17334
+  },
+  "performance": {
+    "precision_at_50_model": 0.96,
+    "precision_at_50_rule": 0.9,
+    "base_rate": 0.0949,
+    "extra_persistent_pages_per_50": 3.0
+  },
+  "no_go_policies": [
+    {
+      "policy": "thin-history pages never queued",
+      "status": "UPSTREAM (ML-04 contract)"
+    },
+    {
+      "policy": "below-floor pages never queued",
+      "status": "UPSTREAM (ML-04 contract)"
+    },
+    {
+      "policy": "durable risers monitor-only",
+      "status": "ASSERTED"
+    },
+    {
+      "policy": ">20x swings verify first",
+      "status": "ASSERTED"
+    },
+    {
+      "policy": "90-day cooldown on recently optimised pages",
+      "status": "ASSERTED",
+      "note": "corrects ML-07, which recorded this as NOT IMPLEMENTABLE; dim_content.last_optimized_date exists",
+      "suppressed": 4383,
+      "pages_with_no_optimisation_date": 29367
+    },
+    {
+      "policy": "position 1-2 never gets a straight rewrite",
+      "status": "ASSERTED"
+    }
+  ],
+  "monitoring": {
+    "pre_release": {
+      "population_change": 0.3268,
+      "max_feature_psi": 2.1128,
+      "features_above_0_25": 2
+    },
+    "post_label": {
+      "base_rate_train": 0.119,
+      "base_rate_deploy": 0.0949,
+      "shift": -0.0241,
+      "model_ahead_of_rule": true
+    },
+    "status": "PROPOSED policy, implemented in this notebook only"
+  },
+  "exports": [
+    "work/outputs/content_action_playbook_queue.csv (not committed)",
+    "work/figures/precision_at_k.png",
+    "work/figures/action_mix.png"
+  ],
+  "figure_captions": {
+    "figure_1": "Figure 1. Precision@K for the model order and the frozen Week-4 rule on 60,942 pages across 34 clients, features from March 2026 and observed outcomes from April 2026; the model was fitted on February->March and applied unchanged. Higher is better. The dotted line is the base rate (0.095) -- what a random queue returns. The shaded band is the 50-page review budget, which is where the comparison matters. WHAT THIS DOES NOT PROVE: it does not show that any feature is a search ranking factor, and it does not show that editing a flagged page causes its gap to close. Predictive, not causal.",
+    "figure_2": "Figure 2. Action mix across 60,942 eligible pages at the 2026-04-01 decision moment. Reason codes come from the frozen Week-4 rule; the order within each action comes from the model. Most of the portfolio is NO_ACTION by design -- a queue that cannot say 'nothing this month' is unreadable. INVESTIGATE_QUIET_RISK covers pages the model ranks highly with no rule reason attached, and pages at positions 1-2 where the peer comparison was shown to be unfair."
+  },
+  "claim_discipline": "observed, measured, directional, decision-support; no causal claim",
+  "open_checks": [
+    "only one time-forward window evaluated",
+    "no calibration -- model_score is not a probability",
+    "no causal evidence: no page was edited as an experiment",
+    "June 2026 remains sealed"
+  ]
+}
