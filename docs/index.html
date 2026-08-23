@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which pages should an editor review first? A position-relative CTR queue tested on 79M rows of production search data</title>
+<meta name="description" content="An observational study on a pseudonymized production search warehouse: a position-relative CTR gap rule, a Random Forest ranker, grouped and time-forward validation, and a content action playbook. Predictive, not causal.">
+<meta property="og:title" content="Which pages should an editor review first?">
+<meta property="og:description" content="Ranking a 50-page monthly review queue on 60,942 pages across 34 clients. Model precision@50 0.96 vs frozen rule 0.90 vs base rate 0.095. Predictive, not causal.">
+<meta property="og:type" content="article">
+<style>
+  :root{
+    --ink:#16191d; --muted:#5b636e; --line:#e2e6ea; --bg:#ffffff; --soft:#f6f8fa;
+    --accent:#1f4e79; --warn:#8a5a00; --warnbg:#fff8e6; --good:#0f5132; --goodbg:#eaf5ee;
+    --maxw:760px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 20px}
+  header.top{border-bottom:1px solid var(--line); background:var(--soft)}
+  .kicker{font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin:0 0 8px}
+  h1{font-size:34px; line-height:1.22; margin:0 0 12px; letter-spacing:-.01em}
+  .sub{font-size:19px; color:var(--muted); margin:0 0 18px}
+  .dateline{font-size:13px; color:var(--muted); border-top:1px solid var(--line);
+            border-bottom:1px solid var(--line); padding:10px 0; margin:18px 0 0;
+            display:flex; flex-wrap:wrap; gap:6px 22px}
+  .dateline b{color:var(--ink); font-weight:600}
+  nav.toc{position:sticky; top:0; z-index:5; background:rgba(255,255,255,.96);
+          border-bottom:1px solid var(--line); backdrop-filter:blur(6px)}
+  nav.toc ol{list-style:none; display:flex; flex-wrap:wrap; gap:14px; margin:0; padding:10px 0; font-size:13px}
+  nav.toc a{color:var(--muted); text-decoration:none}
+  nav.toc a:hover{color:var(--accent); text-decoration:underline}
+  h2{font-size:25px; margin:44px 0 6px; letter-spacing:-.01em; scroll-margin-top:56px}
+  h2 .num{color:var(--muted); font-weight:400; font-size:17px; margin-right:8px}
+  h3{font-size:18px; margin:26px 0 6px}
+  p{margin:0 0 14px}
+  a{color:var(--accent)}
+  .lede{font-size:18px}
+  .tldr{background:var(--soft); border:1px solid var(--line); border-left:4px solid var(--accent);
+        border-radius:6px; padding:16px 18px; margin:22px 0}
+  .tldr h3{margin:0 0 10px; font-size:15px; letter-spacing:.06em; text-transform:uppercase; color:var(--accent)}
+  .tldr dl{margin:0; display:grid; grid-template-columns:132px 1fr; gap:6px 14px; font-size:15.5px}
+  .tldr dt{font-weight:650; color:var(--muted)}
+  .tldr dd{margin:0}
+  .box{border:1px solid var(--line); border-radius:6px; padding:14px 16px; margin:18px 0; background:var(--soft)}
+  .caveat{background:var(--warnbg); border:1px solid #f0dfae; border-left:4px solid var(--warn);
+          border-radius:6px; padding:12px 16px; margin:8px 0 22px; font-size:15.5px}
+  .caveat b{color:var(--warn)}
+  .guard{background:var(--warnbg); border-left:3px solid var(--warn); padding:8px 12px; margin:8px 0; font-size:15px}
+  .claim{border-left:3px solid var(--accent); padding:6px 0 6px 14px; margin:14px 0}
+  .claim b{color:var(--accent)}
+  table{border-collapse:collapse; width:100%; font-size:15px; margin:14px 0}
+  th,td{border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top}
+  th{background:var(--soft); font-weight:650}
+  td.num,th.num{text-align:right; font-variant-numeric:tabular-nums}
+  tr.hi td{background:#eef4fa; font-weight:600}
+  figure{margin:22px 0}
+  figure img{width:100%; height:auto; border:1px solid var(--line); border-radius:6px; display:block}
+  figcaption{font-size:14.5px; color:var(--muted); margin-top:9px; line-height:1.55}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:14px;
+       background:var(--soft); padding:1px 5px; border-radius:4px}
+  pre{background:var(--soft); border:1px solid var(--line); border-radius:6px; padding:12px 14px;
+      overflow-x:auto; font-size:13.5px; line-height:1.5}
+  pre code{background:none; padding:0}
+  .rec{border:1px solid var(--line); border-radius:6px; padding:16px 18px; margin:18px 0}
+  .rec h3{margin-top:0}
+  .rec .lab{font-size:12px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); font-weight:650}
+  ul,ol{margin:0 0 14px; padding-left:22px}
+  li{margin:0 0 6px}
+  footer{border-top:1px solid var(--line); margin-top:52px; padding:26px 0 60px;
+         font-size:14.5px; color:var(--muted); background:var(--soft)}
+  .pill{display:inline-block; font-size:12px; padding:2px 9px; border-radius:999px;
+        background:#e8eef5; color:var(--accent); font-weight:650; letter-spacing:.03em}
+  .pill.up{background:#ece9f7; color:#4b3f8f}
+  .pill.prop{background:var(--warnbg); color:var(--warn)}
+  @media (max-width:640px){
+    body{font-size:16px}
+    h1{font-size:27px} h2{font-size:22px}
+    .tldr dl{grid-template-columns:1fr; gap:2px}
+    .tldr dt{margin-top:8px}
+    nav.toc ol{gap:10px; font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap" style="padding-top:34px; padding-bottom:24px">
+    <p class="kicker">Applied ML study · pseudonymized production search warehouse</p>
+    <h1>Which pages should an editor review first?</h1>
+    <p class="sub">A position-relative CTR gap queue, ranked by a forward-validated model and
+       explained by a frozen rule — measured on 60,942 pages across 34 client portfolios.</p>
+    <div class="dateline">
+      <span><b>Published</b> 2026-08-23</span>
+      <span><b>Data window</b> Feb–Apr 2026 (June 2026 sealed)</span>
+      <span><b>Release</b> FlyRank internship warehouse, 78,835,655 fact rows</span>
+      <span><b>Code</b> <a href="https://github.com/widadfatimakhan/flyrank-internship-ml">repository</a></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc"><div class="wrap"><ol>
+  <li><a href="#abstract">Abstract</a></li>
+  <li><a href="#problem">Problem</a></li>
+  <li><a href="#data">Data</a></li>
+  <li><a href="#method">Methodology</a></li>
+  <li><a href="#results">Results</a></li>
+  <li><a href="#limits">Limitations</a></li>
+  <li><a href="#recs">Recommendations</a></li>
+  <li><a href="#repro">Reproducibility</a></li>
+  <li><a href="#ack">Acknowledgments</a></li>
+</ol></div></nav>
+
+<main class="wrap">
+
+<!-- ========================= 1. ABSTRACT ========================= -->
+<h2 id="abstract"><span class="num">1</span>Abstract</h2>
+
+<div class="tldr">
+  <h3>In five lines</h3>
+  <dl>
+    <dt>Question</dt><dd>Of the pages already flagged as under-converting, which will <em>still</em> be under-converting next month — and therefore deserve an editor's hour?</dd>
+    <dt>Data</dt><dd>78.8M daily page rows; 60,942 eligible pages across 34 client portfolios; March 2026 features, April 2026 observed outcomes.</dd>
+    <dt>Result</dt><dd>precision@50 <b>0.96</b> (model) vs <b>0.90</b> (frozen rule) vs <b>0.095</b> base rate, on held-out clients and on a month the model was fitted before.</dd>
+    <dt>Decision</dt><dd>Orders a 50-page monthly review queue; the rule supplies the reason a human can check.</dd>
+    <dt>Biggest limit</dt><dd>One forward window, and the label is partly a page-size detector by construction.</dd>
+  </dl>
+</div>
+
+<p class="lede">A content editor can review roughly fifty pages a month against a portfolio of tens of
+thousands, so the <em>order</em> of the review queue is the entire product. This study defines an
+observed monthly label — <em>would the frozen Week-4 rule flag this page again next month?</em> — and
+ranks pages against it using eleven features computed strictly before the decision moment. The
+metric, precision@50, was fixed before any model was trained.</p>
+
+<p>On 60,942 pages across 34 client portfolios, a Random Forest measured precision@50 of
+<b>0.96</b> under five client-grouped folds and <b>0.96</b> again under a stricter time-forward test
+in which the model was fitted on February→March and applied unchanged to March→April; the frozen
+rule measured 0.90 and a random queue 0.095. The margin over the rule at K=200 was +0.103 with a
+95% bootstrap interval of +0.055 to +0.155, which excludes zero. A separate earlier experiment on a
+nine-feature configuration measured ROC AUC of 0.909 with a random split against 0.893 with a
+client-grouped split; the grouped number is the one reported, because it matches how the system
+would be used.</p>
+
+<p>The work is <b>decision-support</b>: it orders pages worth opening. It does not diagnose what is
+wrong with a page, and no result here shows that editing a page changes its outcome. Limitations,
+the audit that produced them, and the exact route to reproduce every number are given below.</p>
+
+<div class="caveat"><b>What this study does not prove.</b> No feature here is shown to be a search
+ranking factor, and nothing here shows that rewriting a page causes its click-through rate to
+recover. This is predictive, not causal.</div>
+
+<!-- ========================= 2. PROBLEM ========================= -->
+<h2 id="problem"><span class="num">2</span>Introduction and problem statement</h2>
+
+<p>A page can rank well and still get almost no clicks. It appears in the results, people see it,
+and they scroll past. Often that means the title and description under-sell what is actually on the
+page — twenty minutes of an editor's time could fix it.</p>
+
+<p>But a single client may have twenty thousand pages and an editor has an afternoon. So the real
+question is not <em>"is this page underperforming?"</em> — it is <em>"which pages do I open
+first?"</em></p>
+
+<p>A fixed threshold cannot answer that, and this is measurable rather than assumed. A page at
+position 2 earning 1% is doing badly; a page at position 40 earning 1% is doing well. Applying a
+flat "flag anything under 1% CTR" rule to this portfolio flags <b>96.7%</b> of pages — it hands an
+editor their entire portfolio back, unsorted. What counts as good depends on where you rank, so the
+comparison has to be computed from the data and re-computed as the data changes.</p>
+
+<h3>The decision this supports</h3>
+<p>One content editor, once a month, choosing roughly fifty pages to open. Because the budget is
+that small, precision at the head of the queue is the only metric that matters — which is why
+precision@50 was fixed in Week 4, before any model existed. Choosing a metric after seeing results
+is how a project accidentally selects whichever number flatters it.</p>
+
+<h3>Claims this paper makes</h3>
+
+<div class="claim"><b>Claim 1.</b> On 60,942 pages across 34 client portfolios, the model measured a
+higher precision@50 than the frozen rule (0.96 vs 0.90) against a base rate of 0.095, and the
+advantage held at every review depth tested from K=10 to K=500. <em>Boundary:</em> one feature
+month and one outcome month; nothing here establishes that it holds in other months.
+→ <a href="#results">§5 Results</a></div>
+
+<div class="claim"><b>Claim 2.</b> The evaluation boundary changes the answer. A separate earlier
+nine-feature configuration measured ROC AUC 0.909 on a random split and 0.893 when whole clients
+were held out; a related published comparison in this dataset family moved from 0.996 to 0.496 under
+the same change. The grouped number is reported throughout.
+→ <a href="#method">§4 Methodology</a></div>
+
+<div class="claim"><b>Claim 3.</b> The label is size-influenced by construction: the positive rate
+runs from 0.4% among pages under 1,000 monthly impressions to 47.1% among pages above 20,000.
+Ranking by page size alone reaches precision@50 of 0.42, and by CTR gap alone 0.50 — so neither
+ingredient explains the model's 0.96, but the label is easier than it looks.
+→ <a href="#limits">§6 Limitations</a></div>
+
+<!-- ========================= 3. DATA ========================= -->
+<h2 id="data"><span class="num">3</span>Data</h2>
+
+<p>All work uses the <b>FlyRank ML internship warehouse release</b>, a gated, pseudonymized
+derivative of production Search Console and Analytics data. Every choice below has its reason in the
+same sentence.</p>
+
+<table>
+  <tr><th>Item</th><th>Value</th><th>Why</th></tr>
+  <tr><td>Source release</td><td><code>FlyRank/internship-warehouse</code></td>
+      <td>gated, pseudonymized; no URLs, titles or raw queries exist in it</td></tr>
+  <tr><td>Fact table</td><td><code>fact_content_daily_performance</code> — 78,835,655 rows</td>
+      <td>one row per page, per day, per client</td></tr>
+  <tr><td>Dimension</td><td><code>dim_content</code> — 519,606 rows</td>
+      <td>page attributes; key tested unique before any join</td></tr>
+  <tr><td>Dimension</td><td><code>dim_clients</code> — 104 rows</td>
+      <td>read for history coverage only, never as a feature</td></tr>
+  <tr><td>Feature window</td><td>2026-03-01 → 2026-03-31</td>
+      <td>a settled mid-panel month; recent days are still being revised upstream</td></tr>
+  <tr><td>Outcome window</td><td>2026-04-01 → 2026-04-30</td>
+      <td>strictly after the decision moment, so it cannot leak</td></tr>
+  <tr><td>Training window</td><td>2026-02 features → 2026-03 outcomes</td>
+      <td>lets the model be fitted <em>before</em> the evaluated month existed</td></tr>
+  <tr><td>Sealed</td><td>2026-06</td>
+      <td>the panel's final month; reserved as the natural future outcome window</td></tr>
+  <tr><td>Unit of analysis</td><td>one page-month</td>
+      <td>the decision is made once per page, not once per page-day</td></tr>
+  <tr class="hi"><td>Analysis population</td><td>61,881 eligible → 60,942 with outcomes, 34 clients</td>
+      <td>eligibility below; 939 pages (1.5%) had no readable April data</td></tr>
+</table>
+
+<h3>Eligibility, and why each rule exists</h3>
+<ul>
+  <li><b>≥ 500 impressions in the window.</b> Measured, not assumed: below 100 impressions a single
+      extra click moves a page's CTR by more than a full percentage point — larger than the entire
+      flagging threshold. Under that floor a CTR gap is not a weak measurement, it is not a
+      measurement.</li>
+  <li><b>≥ 5 active days.</b> Within-window volatility and momentum are meaningless otherwise.</li>
+  <li><b>A valid position.</b> See the correction below.</li>
+</ul>
+
+<h3>What was excluded, and why</h3>
+<table>
+  <tr><th>Excluded</th><th>Reason</th></tr>
+  <tr><td>All 14 GA4-side columns (<code>ga4_*</code>, <code>sessions_*</code>,
+      <code>scroll_events</code>, <code>ai_*</code>)</td>
+      <td>availability is three-valued and tracks the client: among instrumented clients,
+      <b>93.9%</b> of page-days still carry no GA4 data. A feature built on that encodes
+      instrumentation, not behaviour.</td></tr>
+  <tr><td><code>fact_content_query_90d</code></td>
+      <td>its fixed 90-day window overlaps the outcome window; those columns would contain the label
+      period.</td></tr>
+  <tr><td>Client and content identifiers</td>
+      <td>grouping keys for validation, never features. Client pooled CTR varies ~10× across the
+      portfolio, so an identifier would let a model recognise the client instead of learning the
+      pattern.</td></tr>
+  <tr><td>Product flags (<code>health_score</code>, <code>needs_ctr_fix</code>,
+      <code>is_quick_win</code>)</td>
+      <td>an existing system's answers. Predicting an answer from the inputs that built it is
+      circular.</td></tr>
+  <tr><td>URLs, titles, meta descriptions, raw queries</td>
+      <td>removed upstream for privacy — which is also why this work can say a page under-converts
+      but never <em>why</em>.</td></tr>
+</table>
+
+<h3>A data-convention correction worth publishing</h3>
+<p>264,737 rows (7.3%) carried an average position below 1, which is impossible for a Google result.
+The instinct is to filter them as corrupt. Instead the column's provenance was tested: it equals
+<code>sum_position / impressions</code> on <em>every</em> row, and Search Console's bulk export
+documents <code>sum_position</code> as <b>zero-based</b>, with 1-based position defined as
+<code>SUM(sum_position)/SUM(impressions) + 1</code>.</p>
+<p>So a page reading 0.06 sits at true position 1.06. The original guard was deleting <b>452 of the
+best-ranked pages in the dataset</b>, silently. A <code>+1</code> correction is applied everywhere,
+and the guard now removes nothing.</p>
+
+<!-- ========================= 4. METHODOLOGY ========================= -->
+<h2 id="method"><span class="num">4</span>Methodology</h2>
+
+<h3>4.1 The label — an observed outcome, not an authored proxy</h3>
+<p>Earlier weeks ranked by <code>ctr_gap_pp</code>, a rule the author defined. Nobody labelled these
+pages, so a model trained on it would be learning arithmetic back. The label used here is instead
+forward-looking:</p>
+<pre><code>label = 1  if the page would STILL be flagged in April
+           (April gap &gt;= 0.10pp AND April missed clicks &gt;= 10)
+label = 0  otherwise</code></pre>
+<p>Those are the frozen Week-4 thresholds, applied one month later to what actually happened. It
+answers the editor's real question: <em>would this have fixed itself?</em> <b>Base rate: 9.5%</b> —
+about nine in ten flagged problems resolve without intervention, which is precisely why separating
+them is worth doing.</p>
+
+<h3>4.2 The comparison target — the CTR gap</h3>
+<pre><code>ctr_pp     = 100 × clicks / impressions
+peer_pp    = 100 × (Σ clicks in tier − clicks_i) / (Σ impressions in tier − impressions_i)
+ctr_gap_pp = peer_pp − ctr_pp</code></pre>
+<p>The peer baseline is <b>leave-one-out</b> — a page is never part of the benchmark it is judged
+against — and <b>volume-weighted</b>, so a 500-impression page does not move the benchmark as much
+as a 200,000-impression one. Position is averaged as
+<code>SUM(sum_position)/SUM(impressions)</code>, not as a mean of daily averages, which would give a
+3-impression Tuesday the same weight as a 3,000-impression Saturday.</p>
+
+<h3>4.3 Features — eleven, all knowable before the decision moment</h3>
+<p>A feature qualifies only if an editor could have known it on the morning of 2026-04-01
+<em>and</em> knowing it does not hand back the answer. Knowability is necessary, not sufficient.</p>
+<table>
+  <tr><th>Group</th><th>Features</th></tr>
+  <tr><td>Traffic shape</td><td><code>log_impressions</code>, <code>active_days</code>,
+      <code>position_volatility</code>, <code>top_day_share</code>, <code>momentum_log</code></td></tr>
+  <tr><td>Within-client scale</td><td><code>impressions_share_of_client</code> — the page's share of
+      its own site's traffic, because a 10× spread across clients makes absolute size less
+      meaningful than relative size</td></tr>
+  <tr><td>Page attributes</td><td><code>log_word_count</code>, <code>content_meta_missing</code>,
+      two one-hot content-type columns</td></tr>
+  <tr><td>Prior-window outcome</td><td><code>gap_pp</code>, <code>ctr_pp</code>,
+      <code>log_clicks</code> — legal here <em>because</em> the label moved to April</td></tr>
+</table>
+
+<div class="box"><b>An accidental finding worth reporting.</b> The <code>dim_content</code> join
+covered <b>100%</b> of eligible pages, yet <b>20.3%</b> of those rows carried no word count. Because
+the missingness was flagged rather than silently imputed, it could be measured — and
+<code>content_meta_missing</code> ranked as the second-strongest feature by rank correlation with the
+target, ahead of six real measurements. "We do not know how long this page is" carries signal. A
+silent median fill would have destroyed it.</div>
+
+<h3>4.4 Leakage — treated as a method, not an apology</h3>
+<p>Three boundaries, each checked in code rather than asserted in prose:</p>
+<ol>
+  <li><b>Timeline.</b> Last feature date 2026-03-31 &lt; first outcome date 2026-04-01. April
+      impressions are <em>not</em> in the label formula and are excluded anyway — being innocent is
+      not the same as being on the right side of the line.</li>
+  <li><b>Groups.</b> No client appears in both sides of any fold, asserted with a set-disjointness
+      check on all five folds.</li>
+  <li><b>Names.</b> No outcome-month column, product flag, identifier, or context-only column appears
+      in the feature list.</li>
+</ol>
+
+<div class="box"><b>The detector is tested, not trusted.</b> A leakage check that reports "all clear"
+is only reassuring if it is capable of reporting anything else. Two positive controls were run:
+(a) adding <code>clicks</code> to the same-window proxy moved the score from 0.167 to 0.902; and
+(b) deliberately injecting April impressions — an outcome-month column — into the final feature set
+moved ROC AUC by <b>+0.054</b>. The detector fires. An all-clear from it therefore means
+something.</div>
+
+<h3>4.5 Validation — two separate honesty problems</h3>
+<p><b>Time</b> is solved by construction: features end 03-31, outcomes start 04-01, the decision
+moment sits between. <b>Groups</b> are solved by the split: <code>GroupKFold(5)</code> on client, all
+metrics out-of-fold.</p>
+<p>And the stricter test — the model was fitted on February→March and applied to March→April
+<em>unchanged</em>, with no refitting and no threshold tuning. That is what deployment looks like:
+you fit on what you had, and the next month arrives whether you are ready or not. Between fitting and
+use, the base rate moved from 0.119 to 0.095, and four of the 34 evaluated clients had never been
+seen in training.</p>
+
+<h3>4.6 Reproducibility caveat found by re-running</h3>
+<p>With seeds fixed and <code>n_jobs=1</code>, two runs still differed. The source query had no
+<code>ORDER BY</code>, and DuckDB does not guarantee row order across parallel Parquet reads; Random
+Forest bootstraps rows <em>by index</em>, so a different sequence builds slightly different trees.
+Pinning the order fixed the instability — and moved an earlier headline from precision@50 = 1.00 to
+<b>0.96</b>. The lower, stable number is the one reported. "Perfect at the top fifty" was partly an
+artifact of row ordering, and that was only discoverable by re-running rather than quoting.</p>
+
+<!-- ========================= 5. RESULTS ========================= -->
+<h2 id="results"><span class="num">5</span>Results</h2>
+
+<p>Every row below is scored on the <b>same 60,942 pages, the same folds, the same metric, the same
+K, and the same tie policy</b> (score descending, exact ties broken by a seeded jitter; exactly one
+row shared the precision@50 cutoff). The base rate sits beside every number, because precision@50 of
+0.90 means nothing until you know whether guessing returns 0.65 or 0.095.</p>
+
+<table>
+  <tr><th>Ranking method</th><th class="num">precision@50</th><th class="num">precision@200</th>
+      <th class="num">ROC AUC</th><th class="num">lift@50</th></tr>
+  <tr><td>Random ordering <span class="pill">floor</span></td>
+      <td class="num">0.04</td><td class="num">0.060</td><td class="num">0.500</td><td class="num">0.4×</td></tr>
+  <tr><td>Flat "CTR &lt; 1%" rule</td><td class="num" colspan="4">flags 96.7% of the portfolio — rejected, see §2</td></tr>
+  <tr><td>Frozen Week-4 rule <span class="pill">baseline</span></td>
+      <td class="num">0.90</td><td class="num">0.875</td><td class="num">0.864</td><td class="num">9.5×</td></tr>
+  <tr><td>Logistic Regression, shape features</td>
+      <td class="num">0.48</td><td class="num">0.385</td><td class="num">0.878</td><td class="num">5.1×</td></tr>
+  <tr><td>Random Forest, shape features only</td>
+      <td class="num">0.90</td><td class="num">0.845</td><td class="num">0.881</td><td class="num">9.5×</td></tr>
+  <tr><td>Random Forest, grouped CV (same month)</td>
+      <td class="num">0.96</td><td class="num">0.975</td><td class="num">0.921</td><td class="num">10.1×</td></tr>
+  <tr class="hi"><td>Random Forest, <b>time-forward</b> (fitted Feb→Mar, applied unchanged)</td>
+      <td class="num">0.96</td><td class="num">0.980</td><td class="num">0.925</td><td class="num">10.1×</td></tr>
+</table>
+<p style="font-size:14.5px;color:var(--muted);margin-top:-4px">Base rate = 0.095. The random row is
+shown separately because it is not a trained method. The Logistic Regression row is a baseline that
+was <em>rejected</em>, and it is kept visible on purpose: a paper that shows only the baselines it
+beat invites the question of what it hid.</p>
+
+<h3>Is the margin real?</h3>
+<p>Resampling the rows 500 times and re-measuring, the time-forward model's margin over the frozen
+rule at K=200 was <b>+0.103, with a 95% interval of +0.055 to +0.155</b>. The interval excludes zero,
+so on this evidence the difference is unlikely to be resampling noise. Across the five
+client-grouped folds the model was ahead in <b>5 of 5</b>, with margins from +0.04 to +0.16 — so the
+pooled number is not hiding a flip. One fold contains a single client holding 23% of the rows, so the
+five folds are not five equally-informative exams.</p>
+
+<figure>
+  <img src="img/precision_at_k.png" alt="Precision at K for the model order and the frozen rule, with the base rate and the fifty-page review budget marked.">
+  <figcaption><b>Figure 1 — what to notice: the gap on the left, where the review budget lives.</b>
+  Precision@K for the model order (solid, circles) and the frozen Week-4 rule (dashed, squares) on
+  60,942 pages across 34 clients; features from March 2026, observed outcomes from April 2026, model
+  fitted on February→March and applied unchanged. Higher is better. The dotted line is the base rate
+  (0.095) — what a random queue returns. The shaded band is the 50-page review budget. Supports
+  Claim 1, and only that claim.</figcaption>
+</figure>
+
+<div class="caveat"><b>What Figure 1 does not prove.</b> It does not show that any feature is a
+search ranking factor, and it does not show that editing a flagged page causes its gap to close.
+Predictive, not causal.</div>
+
+<h3>What the model leans on</h3>
+<p>Permutation importance, measured by shuffling one column at a time on held-out clients:
+<code>log_impressions</code> at 0.124 drop in AUC, then <code>gap_pp</code> at 0.039, then a long
+tail. One feature towering over the rest is the classic leakage symptom — so it was investigated
+rather than celebrated, and the explanation is structural rather than temporal (see Claim 3 and
+§6).</p>
+
+<h3>Where the model is wrong</h3>
+<ul>
+  <li><b>By position band:</b> ROC AUC 0.90–0.94 across every band <em>including positions 1–2</em>,
+      where an earlier audit showed the peer comparison is unfair. Predictability survived there even
+      though fairness did not.</li>
+  <li><b>By page size:</b> AUC 0.725 for pages under 1,000 impressions against 0.919 above 20,000 —
+      weakest exactly where the base rate is near zero.</li>
+  <li><b>By client:</b> AUC from 0.600 to 0.990, median 0.932. It does not work equally well for
+      everyone.</li>
+  <li><b>The confident errors have a pattern.</b> Two of the three most confident mistakes were pages
+      whose April traffic fell by more than half: 21,225 → 4,733 and 14,172 → 3,574 impressions.
+      Their gaps stopped clearing the threshold because demand left, not because anything improved.
+      <b>The label cannot separate "fixed" from "died."</b> No metric revealed this; reading
+      individual rows did.</li>
+</ul>
+
+<!-- ========================= 6. LIMITATIONS ========================= -->
+<h2 id="limits"><span class="num">6</span>Limitations and honest framing</h2>
+
+<p>Each limitation below attaches to a specific claim rather than serving as a general disclaimer.</p>
+
+<table>
+  <tr><th>Limitation</th><th>Which claim it bounds</th></tr>
+  <tr><td><b>One forward window.</b> Exactly one train-then-deploy transition was evaluated. A
+      backtest repeats this across many decision moments.</td><td>Claim 1</td></tr>
+  <tr><td><b>The label is size-influenced by construction.</b> The ≥10-missed-clicks gate takes the
+      positive rate from 0.4% to 47.1% across volume bands. Ranking by size alone reaches 0.42 and by
+      gap alone 0.50, so neither explains 0.96 — but the exam is easier than it looks.</td>
+      <td>Claim 3</td></tr>
+  <tr><td><b>The label cannot distinguish recovery from collapse.</b> A page whose traffic dies stops
+      clearing the threshold and is scored as resolved.</td><td>Claim 1</td></tr>
+  <tr><td><b>Survivor selection, disclosed.</b> 939 pages (1.5%) with no readable April data were
+      excluded — outcome-window information used to define the population. They may be the ones that
+      failed hardest.</td><td>Claims 1, 3</td></tr>
+  <tr><td><b>The peer comparison fails at positions 1–2.</b> Pages ranking 1–2 pool to 0.118% CTR
+      against 0.394% at positions 3–5, with 35% taking zero clicks. Every client tested reproduced it
+      internally (5 of 5, ratios 1.7× to 18.2×), so it is not one client and not a few large pages.
+      Those pages are routed to investigation, never to a rewrite instruction.</td><td>Claim 1</td></tr>
+  <tr><td><b>Clients differ by roughly 10×.</b> Pooled CTR runs 0.115% to 1.159% across the 23
+      clients large enough to measure, against a single global baseline of 0.295%.</td>
+      <td>Claim 2</td></tr>
+  <tr><td><b>No calibration.</b> The output column is named <code>model_score</code>, not confidence:
+      calibration was never evaluated, so 0.8 does not mean an 80% chance.</td><td>Claim 1</td></tr>
+  <tr><td><b>One unresolved measurement question.</b> Pooled CTR runs ≈0.3% across every position
+      tier here. The reference portfolio's published median CTR is 0.13%, so this is consistent with
+      the data family — but the absolute level is reported without a settled explanation rather than
+      quietly normalised.</td><td>all</td></tr>
+  <tr><td><b>No causal evidence, and none is available.</b> No page was edited as an experiment and
+      no control group exists.</td><td>all</td></tr>
+</table>
+
+<div class="box"><b>Claim language used throughout.</b> <em>Observed</em> — we saw it, we did not
+cause it. <em>Measured</em> — there are numbers and a route to them. <em>Directional</em> — it
+improves on balance, not always. <em>Decision-support</em> — it helps a person choose; it does not
+tell them what will happen.</div>
+
+<!-- ========================= 7. RECOMMENDATIONS ========================= -->
+<h2 id="recs"><span class="num">7</span>Ranked recommendations</h2>
+
+<p>The design principle: <b>the frozen rule supplies the reason, the model supplies the order.</b>
+They do different jobs. The rule is arithmetic a person can check — <em>"CTR 0.09% against peers at
+0.34%, a gap of 0.25pp worth about 45 clicks a month."</em> The model is a probability nobody can
+interrogate, but it sorts better at the head of the queue. An editor needs both.</p>
+
+<figure>
+  <img src="img/action_mix.png" alt="Bar chart of proposed actions across the eligible portfolio, dominated by no action.">
+  <figcaption><b>Figure 2 — what to notice: most of the portfolio is "nothing this month."</b>
+  Proposed action across 60,942 eligible pages at the 2026-04-01 decision moment. Reason codes come
+  from the frozen rule; the order within each action comes from the model. A queue that cannot say
+  "no action" is unreadable.</figcaption>
+</figure>
+
+<div class="rec">
+  <p class="lab">Recommendation 1 · 1,452 pages (2.4%)</p>
+  <h3>Snippet review</h3>
+  <p><b>Finding.</b> The page's CTR sits measurably below pages at a similar position, and the
+  shortfall is worth at least ten clicks a month.</p>
+  <p><b>Action.</b> Read the title and meta description against the page and the query intent.</p>
+  <div class="guard"><b>Guardrail — do not:</b> rewrite anything before checking whether a season, a
+  campaign, an intent shift, or a live client migration explains the change. The queue tells you what
+  to look at; it never authorises a rewrite.</div>
+  <p><b>Measure.</b> CTR at a comparable position six weeks after the change, against pages in the
+  same tier that were not touched.</p>
+</div>
+
+<div class="rec">
+  <p class="lab">Recommendation 2 · 1,795 pages (2.9%)</p>
+  <h3>Verify, then review</h3>
+  <p><b>Finding.</b> The page is flagged, but more than 30% of its month arrived on one day, or its
+  traffic swung by more than 20× between half-months.</p>
+  <p><b>Action.</b> Confirm it is not a tracking or campaign artefact <em>first</em>. A broken tag
+  looks exactly like a broken snippet.</p>
+  <div class="guard"><b>Guardrail — do not:</b> treat a monthly CTR from a one-day spike as
+  describing the page. It describes an unusual day.</div>
+  <p><b>Measure.</b> Whether the anomaly persists once the spike day is excluded.</p>
+</div>
+
+<div class="rec">
+  <p class="lab">Recommendation 3 · 14,025 pages (23.0%)</p>
+  <h3>Monitor only</h3>
+  <p><b>Finding.</b> Impressions are rising durably.</p>
+  <p><b>Action.</b> Watch it. A page gaining traffic is not a page to rewrite.</p>
+  <div class="guard"><b>Guardrail — do not:</b> queue it for review because its CTR looks low. This
+  policy exists because of false positives found in error analysis.</div>
+  <p><b>Measure.</b> Whether the rise holds for two more months.</p>
+</div>
+
+<div class="rec">
+  <p class="lab">Recommendation 4 · 62 pages (0.1%)</p>
+  <h3>Investigate quiet risk</h3>
+  <p><b>Finding.</b> The model ranks the page highly, but the rule returns no flag — or the page
+  ranks at position 1–2, where the peer comparison was shown to be unfair.</p>
+  <p><b>Action.</b> A person looks. <b>A high score with no stated reason is a question, not an
+  instruction.</b></p>
+  <div class="guard"><b>Guardrail — do not:</b> action these as if they were review items. Nobody
+  knows why the model ranked them yet.</div>
+  <p><b>Measure.</b> How often investigation finds a nameable cause. If it rarely does, the rule
+  needs a new reason code — or this bucket should shrink.</p>
+</div>
+
+<h3>The no-go list, with enforcement status</h3>
+<p>A policy without a status is decoration, so each says where it is actually enforced.</p>
+<table>
+  <tr><th>Policy</th><th>Status</th></tr>
+  <tr><td>Thin-history pages are never queued</td><td><span class="pill up">Upstream</span> data contract</td></tr>
+  <tr><td>Below-floor pages are never queued</td><td><span class="pill up">Upstream</span> data contract</td></tr>
+  <tr><td>Durable risers are monitor-only</td><td><span class="pill">Asserted</span> 0 violations</td></tr>
+  <tr><td>Swings above 20× go to verification first</td><td><span class="pill">Asserted</span> 0 violations</td></tr>
+  <tr><td>Positions 1–2 never get a straight rewrite instruction</td><td><span class="pill">Asserted</span> 0 violations</td></tr>
+  <tr><td>90-day cooldown on recently optimised pages</td><td><span class="pill">Asserted</span> see below</td></tr>
+</table>
+
+<div class="box"><b>The cooldown was recorded as impossible — and was not.</b> An earlier week's
+receipt stated that no optimisation history existed in the release. It does:
+<code>dim_content.last_optimized_date</code>. Implementing it found <b>31,575 pages</b> optimised
+within 90 days of the decision moment, of which <b>4,383 were headed for a rewrite instruction on a
+page somebody had just rewritten.</b> The hole is disclosed too: 29,367 pages (48.2%) have no
+optimisation date at all and pass the gate by default — including the entire visible top of the
+queue, which is where it matters most.</div>
+
+<h3>Monitoring, and a policy corrected by its own first run</h3>
+<p>Monitoring has two clocks. <b>Pre-release</b> checks (population, schema, feature drift) need no
+labels. <b>Post-label</b> checks (base rate, model vs rule) arrive only after the outcome month
+closes — so a shift is always discovered one cycle late, and can change the next queue but never the
+one already sent.</p>
+
+<p>Running the proposed thresholds produced two pre-release alarms and a diagnosis:
+<code>active_days</code> drift of PSI 2.11 and a +32.7% population change. <b>February has 28 days
+and March has 31.</b> Median active days moved 28 → 31; the feature cannot exceed 28 in training and
+can reach 31 in scoring. Fewer pages clear a 500-impression floor in a shorter month, so the
+population grows going into a longer one.</p>
+
+<div class="guard"><b>Correction adopted before use:</b> normalise <code>active_days</code> by
+days-in-month, and compare population against the same calendar month a year earlier rather than the
+month before. As originally written, the policy would have alarmed on every February→March
+transition for reasons unrelated to model health — and a monitor that cries wolf on the calendar gets
+ignored by month three.</div>
+
+<p>The fallback policy turns the cost/value question into a rule: <b>if the model trails the frozen
+rule for two consecutive labeled months, revert to the rule.</b> Complexity must keep proving it is
+useful.</p>
+
+<h3>Value, as derived arithmetic with its assumptions visible</h3>
+<div class="box">
+  <p style="margin-bottom:8px">In a 50-page review batch, of pages whose gap persisted into the
+  following month:</p>
+  <table style="margin:0">
+    <tr><td>Random ordering</td><td class="num">≈ 4.7 pages</td></tr>
+    <tr><td>Frozen rule</td><td class="num">≈ 45 pages</td></tr>
+    <tr><td>Model order</td><td class="num">≈ 48 pages</td></tr>
+  </table>
+  <p style="margin:10px 0 0"><b>Cost:</b> 50 reviews × ~20 minutes ≈ 17 editor-hours per month.
+  <b>Assumptions:</b> this is a descriptive scenario from one evaluated window, not expected future
+  impact. It assumes a page could reach its position peers' CTR — no experiment here tests that — and
+  it makes no claim about traffic recovery.</p>
+  <p style="margin:10px 0 0"><b>And the honest question:</b> would a plain rule create most of the
+  value with less risk? Largely yes — the rule finds 45 of the 48. The model's contribution is the
+  last three pages, and it costs a fitted artefact that must be monitored and retrained. That is why
+  the fallback policy above exists.</p>
+</div>
+
+<p><b>Never automated:</b> no automatic rewriting; no automatic client-facing reporting; no treating
+<code>model_score</code> as a probability; no acting on an investigation item as if it were a review
+instruction.</p>
+
+<!-- ========================= 8. REPRODUCIBILITY ========================= -->
+<h2 id="repro"><span class="num">8</span>Reproducibility</h2>
+
+<p>Not "code available" — a route. Every number on this page traces to a notebook and a committed
+receipt.</p>
+
+<h3>Environment and controls</h3>
+<ul>
+  <li><b>Runtime:</b> Google Colab, Python 3.12. <code>duckdb</code> (HTTPFS extension),
+      <code>scikit-learn</code>, <code>pandas</code>, <code>numpy</code>, <code>scipy</code>,
+      <code>matplotlib</code>. Exact versions are printed by the first cell of every notebook.</li>
+  <li><b>Seeds:</b> <code>SEED = 42</code> controls the Random Forest fit, the
+      <code>GroupKFold</code> / <code>GroupShuffleSplit</code> assignment, the bootstrap resampling,
+      and the tie-break jitter. <code>n_jobs=1</code> everywhere, because parallel accumulation
+      reorders floating-point sums.</li>
+  <li><b>Row order:</b> every source query carries <code>ORDER BY client_hash_id,
+      content_hash_id</code> — see §4.6 for why this is not optional.</li>
+  <li><b>Data access:</b> the release is gated; a Hugging Face read token is supplied via an
+      environment variable or Colab secret and never appears in any committed file.</li>
+</ul>
+
+<h3>Result-to-notebook map</h3>
+<table>
+  <tr><th>This page</th><th>Produced by</th><th>Receipt</th></tr>
+  <tr><td>§3 data contract, position correction, GA4 exclusion</td>
+      <td><code>w03_data_contract.ipynb</code></td><td><code>ml04_data_contract_receipts.json</code></td></tr>
+  <tr><td>§4.3 features, §4.4 leakage controls</td>
+      <td><code>w03_feature_leakage_check.ipynb</code></td><td><code>ml05_feature_vector_receipts.json</code></td></tr>
+  <tr><td>§6 client spread, positions 1–2 decomposition</td>
+      <td><code>w04_signal_audit.ipynb</code></td><td><code>ml06_signal_audit_receipts.json</code></td></tr>
+  <tr><td>§5 frozen-rule baseline row</td>
+      <td><code>w04_baseline_score.ipynb</code></td><td><code>ml07_baseline_receipts.json</code></td></tr>
+  <tr><td>§5 results table, permutation importance, error analysis</td>
+      <td><code>w05_model.ipynb</code></td><td><code>ml08_model_receipts.json</code></td></tr>
+  <tr><td>§4.5 time-forward test, §4.6 order finding, sabotage test</td>
+      <td><code>w06_validation_audit.ipynb</code></td><td><code>ml09_validation_audit_receipts.json</code></td></tr>
+  <tr><td>§7 recommendations, Figures 1–2, cooldown, monitoring</td>
+      <td><code>w07_action_playbook.ipynb</code></td><td><code>ml10_playbook_receipts.json</code></td></tr>
+  <tr><td>This page, assembled</td>
+      <td><code>capstone.ipynb</code></td><td>—</td></tr>
+</table>
+
+<h3>Rerun from a fresh clone</h3>
+<pre><code>git clone https://github.com/widadfatimakhan/flyrank-internship-ml
+# open work/notebooks/&lt;notebook&gt;.ipynb in Colab
+# add HF_TOKEN as a Colab secret (read scope)
+# Runtime -&gt; Run all</code></pre>
+<p>Each weekly notebook runs standalone from source rather than importing the previous week's
+output. Two of them assert their reproduction against the committed receipt before doing anything
+else, and stop if it does not match.</p>
+
+<h3>References</h3>
+<ol style="font-size:15px">
+  <li>Google Search Console bulk data export schema — definition of <code>sum_position</code> as
+      zero-based and the <code>+1</code> convention for 1-based average position.
+      <a href="https://developers.google.com/search/docs/monitor-debug/bulk-data-export">developers.google.com</a>
+      (used in §3).</li>
+  <li>FlyRank, <em>The State of AI-Driven SEO</em>, March 2026 — portfolio-level reference figures
+      including median CTR and position-tier click capture (used in §6).</li>
+  <li>Nielsen, J. — concise, scannable, objective web writing measured 124% higher usability than
+      promotional prose; the basis for this page's short paragraphs and scannable structure.</li>
+  <li>DuckDB documentation — Parquet scanning over HTTP and ordering guarantees (used in §4.6).</li>
+</ol>
+
+<!-- ========================= 9. ACKNOWLEDGMENTS ========================= -->
+<h2 id="ack"><span class="num">9</span>Acknowledgments and data credit</h2>
+
+<p>Built on the <b><a href="https://flyrank.ai">FlyRank ML Internship dataset</a></b> — a gated,
+pseudonymized release derived from production Search Console and Analytics data
+(<a href="https://flyrank.ai">https://flyrank.ai</a>).</p>
+
+<p>Thanks to the FlyRank ML internship team for the weekly sessions on data contracts, signal
+auditing, honest baselines, grouped and time-aware validation, leakage auditing, and claim
+discipline. The frameworks used here — the comparison contract, the claim ladder, and the
+observed / measured / directional / decision-support vocabulary — come from that programme.</p>
+
+<p>Data credit thanks the source; it does not replace citation. Sources used for specific claims are
+cited beside those claims in §8.</p>
+
+<p style="font-size:15px;color:var(--muted)">No client names, URLs, page titles, or raw search
+queries appear anywhere in this paper or in the underlying repository. All identifiers are
+pseudonymous hashes, used for grouping and validation only.</p>
+
+</main>
+
+<footer><div class="wrap">
+  <p><b>Which pages should an editor review first?</b> · Applied ML capstone, FlyRank ML Internship,
+  August 2026.</p>
+  <p>Observed, measured, directional, decision-support. Predictive, not causal.
+  <a href="https://github.com/widadfatimakhan/flyrank-internship-ml">Repository and notebooks</a> ·
+  <a href="https://flyrank.ai">Data source</a></p>
+</div></footer>
+
+</body>
+</html>
