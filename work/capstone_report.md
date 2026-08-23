@@ -1,6 +1,6 @@
 # Capstone Report — Lane 4: CTR / Engagement Opportunity Scoring
 
-- **Author:** Ahmad
+- **Author:** Widad Khan 
 - **Lane:** Lane 4 — CTR / Engagement Opportunity Scoring
 - **Repo:** https://github.com/widadfatimakhan/flyrank-internship-ml
 - **Date:** 2026-08-23
