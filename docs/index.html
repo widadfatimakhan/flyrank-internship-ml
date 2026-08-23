@@ -132,8 +132,10 @@
   </dl>
 </div>
 
-<p class="lede">A content editor can review roughly fifty pages a month against a portfolio of tens of
-thousands, so the <em>order</em> of the review queue is the entire product. This study defines an
+<p class="lede">This study comes from a live content problem at FlyRank, an SEO company that manages
+content portfolios for dozens of client brands. Its content team can review roughly fifty pages a
+month against portfolios totalling tens of thousands, so the <em>order</em> of the review queue —
+not the flagging — is the actual bottleneck. This study defines an
 observed monthly label — <em>would the frozen rule flag this page again next month?</em> — and
 ranks pages against it using eleven features computed strictly before the decision moment. The
 metric, precision@50, was fixed before any model was trained.</p>
@@ -171,6 +173,32 @@ position 2 earning 1% is doing badly; a page at position 40 earning 1% is doing 
 flat "flag anything under 1% CTR" rule to this portfolio flags <b>96.7%</b> of pages — it hands an
 editor their entire portfolio back, unsorted. What counts as good depends on where you rank, so the
 comparison has to be computed from the data and re-computed as the data changes.</p>
+
+<h3>Where this problem comes from</h3>
+
+<p>FlyRank already flags content. Its production system computes a composite health score and
+rule-based flags such as "needs CTR fix" and "quick win" across every client portfolio. Those flags
+answer <em>what looks wrong</em>. They do not answer <em>what to open first</em>, and at portfolio
+scale that second question is the one that consumes the team's month.</p>
+
+<p>FlyRank's own March 2026 portfolio research sharpened the problem in a way worth quoting.
+Analysing 341,701 content pieces across 57 brands, it found that pages carrying two or three flags
+scored <em>higher</em> than pages carrying none — and diagnosed the reason as structural rather than
+surprising: many flags can only trigger on pages that already have enough impressions or behavioural
+data to diagnose a concrete issue. A flag count is therefore partly a measure of how much data a page
+has, not how much trouble it is in.</p>
+
+<p>That is the gap this work addresses. It does not replace FlyRank's flags — the frozen rule in §7
+is a flag, and it supplies the reason a human can check. What it adds is an ordering over flagged
+pages, validated forward in time, that separates the problems which persist from the roughly nine in
+ten that resolve on their own. Deliberately, no FlyRank product flag is used as a model input:
+predicting an existing system's answer from the inputs that built it would be circular, so the
+product flags are excluded in §3 and the rule baseline is something to beat rather than something to
+learn from.</p>
+
+<p>The lane itself — CTR and engagement opportunity scoring — was one of several open problems
+FlyRank defined for this programme. The framing, the eligibility rules, and the metric are the
+author's; the underlying content problem is theirs.</p>
 
 <h3>The decision this supports</h3>
 <p>One content editor, once a month, choosing roughly fifty pages to open. Because the budget is
