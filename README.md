@@ -1,3 +1,23 @@
+# 📄 [My Capstone: Which Pages Should an Editor Review First?](https://widadfatimakhan.github.io/flyrank-internship-ml/)
+
+A monthly content-review ranking system built on FlyRank's 79-million-row production search
+warehouse (60,942 eligible pages, 34 client portfolios). A frozen hand-written rule supplies the
+*reason*; a Random Forest, validated on held-out clients and on a month it was fitted before,
+supplies the *order* — precision@50 of 0.96 against the rule's 0.90 and a 0.095 base rate.
+
+**Read the paper →** https://widadfatimakhan.github.io/flyrank-internship-ml/
+
+The work worth reading for: the auditing. A zero-based position convention that was silently
+deleting the best-ranked pages in the dataset. An unpinned row order that had inflated the headline
+result to 1.00 — the reproducible number is 0.96, and that's the one shipped. A cooldown recorded
+as "not implementable" that turned out to be implementable, and stopped 4,383 instructions to
+rewrite pages someone had just rewritten.
+
+All notebooks, receipts, and the full write-up are in this repo. Everything below this line is the
+FlyRank internship's starter template, kept as-is for context.
+
+---
+
 # FlyRank ML Internship — Starter Repo
 
 **Applied Search Intelligence: Google Search Ranking & Discoverability**
